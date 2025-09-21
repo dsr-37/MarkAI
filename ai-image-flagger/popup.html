@@ -1,0 +1,90 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MarkAI</title>
+    <style>
+      html, body {
+        width: 250px;
+        min-width: 220px;
+        margin: 0;
+        padding: 0;
+        font-family: 'Aptos', 'Oxygen', sans-serif;
+        color: #fff;
+      }
+      .popup-header {
+        color: #FFF;
+        background: linear-gradient(90deg, #292e8b 0%, #131426 100%);
+        text-align: center;
+        font-weight: medium;
+        padding: 8px 0;
+        font-size: 32px;
+      }
+      .slider-container {
+        background: linear-gradient(90deg, #292e8b 0%, #131426 100%);
+        padding: 20px 12px 16px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .mode-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 80%;
+        height: 6px;
+        border-radius: 4px;
+        background: #555;
+        outline: none;
+        cursor: pointer;
+      }
+      .mode-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #30ace2;
+        border: 2px solid #01082e;
+        cursor: pointer;
+      }
+      .mode-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #30ace2;
+        border: 2px solid #01082e;
+        cursor: pointer;
+      }
+      .mode-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 80%;
+        margin-top: 5px;
+        font-size: 14px;
+      }
+      .mode-text {
+        text-align: center;
+        margin-top: 12px;
+      }
+      .current-mode { 
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="popup-header">MarkAI</div>
+    <div class="slider-container">
+      <input type="range" min="0" max="2" value="0" class="mode-slider" id="modeSlider">
+      <div class="mode-labels">
+        <span>Off</span>
+        <span>Light</span>
+        <span>Strict</span>
+      </div>
+      <div id="modeText" class="mode-text">
+        filtering mode<br><span class="current-mode">off</span>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
