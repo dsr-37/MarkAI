@@ -1,90 +1,62 @@
-
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>MarkAI</title>
-    <style>
-      html, body {
-        width: 250px;
-        min-width: 220px;
-        margin: 0;
-        padding: 0;
-        font-family: 'Aptos', 'Oxygen', sans-serif;
-        color: #fff;
-      }
-      .popup-header {
-        color: #FFF;
-        background: linear-gradient(90deg, #292e8b 0%, #131426 100%);
-        text-align: center;
-        font-weight: medium;
-        padding: 8px 0;
-        font-size: 32px;
-      }
-      .slider-container {
-        background: linear-gradient(90deg, #292e8b 0%, #131426 100%);
-        padding: 20px 12px 16px 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      .mode-slider {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 80%;
-        height: 6px;
-        border-radius: 4px;
-        background: #555;
-        outline: none;
-        cursor: pointer;
-      }
-      .mode-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #30ace2;
-        border: 2px solid #01082e;
-        cursor: pointer;
-      }
-      .mode-slider::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #30ace2;
-        border: 2px solid #01082e;
-        cursor: pointer;
-      }
-      .mode-labels {
-        display: flex;
-        justify-content: space-between;
-        width: 80%;
-        margin-top: 5px;
-        font-size: 14px;
-      }
-      .mode-text {
-        text-align: center;
-        margin-top: 12px;
-      }
-      .current-mode { 
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="popup-header">MarkAI</div>
-    <div class="slider-container">
-      <input type="range" min="0" max="2" value="0" class="mode-slider" id="modeSlider">
-      <div class="mode-labels">
-        <span>Off</span>
-        <span>Light</span>
-        <span>Strict</span>
-      </div>
-      <div id="modeText" class="mode-text">
-        filtering mode<br><span class="current-mode">off</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarkAI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="popup-header">
+      <div class="header-content">
+        <h1 class="app-title">MarkAI</h1>
+        <p class="app-subtitle">Smart AI Detection</p>
       </div>
     </div>
 
-    <script src="popup.js"></script>
-  </body>
+    <div class="popup-content">
+      
+      <div class="status-card">
+        <div class="status-label">Current Status</div>
+        <div class="status-display">
+          <span class="status-badge" id="statusBadge">Inactive</span>
+        </div>
+      </div>
+
+      <div class="filter-card">
+        <div class="slider-wrapper">
+          <input 
+            type="range" 
+            id="modeSlider" 
+            min="0" 
+            max="2" 
+            value="0" 
+            class="slider"
+          >
+          <div class="slider-track"></div>
+          
+          <div class="slider-labels">
+            <span class="slider-label">Off</span>
+            <span class="slider-label">Basic</span>
+            <span class="slider-label">Strict</span>
+          </div>
+        </div>
+
+        <div class="mode-description" id="modeDescription">
+          <p class="description-text">Extension is <strong> INACTIVE </strong>. No filtering applied.</p>
+        </div>
+        
+        <span id="modeText" style="display:none;">off</span>
+      </div>
+
+      </div>
+
+    <div class="popup-footer">
+      <p class="footer-text">v2.0 • MarkAI</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
 </html>

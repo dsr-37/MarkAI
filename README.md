@@ -1,81 +1,63 @@
 # MarkAI - AI Image Detection Chrome Extension
-
 MarkAI is a Chrome extension that can identify, flag & remove images that feels like AI-Generated in real-time while browsing. This helps a user distinguish AI‑generated content from natural images without significantly disrupting normal page interaction.
 
 ## Features
-
-- **Real-time AI Detection**: Automatically scans images on web pages as you scroll
+- Automatically scans images on the web pages as you scroll
 - **Dual Detection Modes**:
-    - **Light Mode**: Adds grey overlays with "AI" labels to detected artificial images
-    - **Strict Mode**: Completely hides AI-generated images from view
-- **Server-Side Processing**: Utilizes a local FastAPI server with ONNX runtime for accurate classification
-- **Smart Performance**: Efficient viewport-based processing with scroll optimization
-- **Google Images Optimized**: Specially tuned for Google Images search results
-- **Fallback System**: Graceful degradation when server is unavailable
+    - Basic Mode: Adds grey overlays with "AI" labels to detected artificial images.
+    - Strict Mode: Completely hides AI-generated images from view.
+- Utilizes a local FastAPI server with ONNX runtime for accurate classification
+- Efficient viewport-based processing with scroll optimization using MutationObserver & IntersectionObserver.
 
+## Deployment Guide (Python 3.9+, Chrome 116+)
 
-## Technical Depth
+1. Clone the repository
 
-The extension consists of two main components:
-1. Chrome Extension Logic
-2. AI Classification Server using Python
----
-- Keeps Track of user scrolling and automatically updates working area accordingly.
-- Parse src, srcset, and data attributes.
-- Uses softmax function to return probabilities.
-- Automatic cleanup of processed images.
+2. Set up the AI server:
+    - Install all necessary dependencies using the following commands:
+    ```
+    #Ensure current directory is ai-flagger-server
+    python3 -m venv venv
+    .\venv\Scripts\Activate.ps1    #for Linux bash: source venv/bin/activate
+    pip install -r requirements.txt
+    ```
 
+3. Download any latest general use AI detector model you can find on hugging face and use Optimum to convert it to `ONNX` format, and place the onnx model file in `ai-flagger-server/models/`.
 
-## Deployment Guide (Python 3.9+)
+4. Either run the python file or enter uvicorn command:
+```
+uvicorn server:app --reload --host 127.0.0.1 --port 8000
+```
 
-1. **Clone the repository**
+5. Inside Chrome, navigate to `chrome://extensions`, enable Developer Mode and Load `ai-image-flagger` folder.
 
-2. **Set up the AI server**: (install all necessary dependencies)
+**NOTE: Adblockers or similar extensions can block it from working properly, so disable them temporarily.**
 
-3. **Download the AI model**: Use Optimum to convert this Image Classification model `dima806/ai_vs_real_image_detection` to onnx format and place the ONNX model file in `ai-flagger-server/models/model.onnx`
+6.  Navigate to google images or any popular image libraries and try it out!
 
-4. **Start the server**: Server will run at `127.0.0.1:8000`
+7. Click on the extension to open the MarkAI Control Panel:
 
-5. **Install the Chrome extension**: Inside Chrome, navigate to `chrome://extensions`, enable Developer Mode and Load `ai-image-flagger` folder.
-
-6. Adblockers or similar extensions can block it from working properly, so disable them temporarily.
-
-### Try It Out!
-
-1. **Navigate to any website** (currently Google Images & Pinterest work fairly)
-2. **Click the MarkAI icon** in your Chrome toolbar
-3. **Select your preferred mode**:
-    - **Off**: No processing
-    - **Light**: Grey overlays on AI images
-    - **Strict**: Hide AI images completely
-4. **Browse normally** - the extension works automatically as you scroll
-
-## Configure For Yourself
-
-- `MODEL_PATH`: Path to your ONNX model file
-- `INPUT_SIZE`: Model input size (default: 224)
-- `FAKE_PROB_THRESHOLD`: Classification threshold (default: 0.90)
-
-
-1. **Detection**: IntersectionObserver monitors images entering the viewport
-2. **URL Extraction**: Smart parsing of src, srcset, and data attributes
-3. **Classification**: HTTP POST to local server with image URLs
-4. **Rendering**: CSS overlays or element hiding based on AI probability
+    ![MarkAI_Control_Panel_Image](ss1.png)
 
 ## Privacy \& Security
 
-- **Local Processing**: All AI inference happens on your machine
-- **No Data Collection**: Extension doesn't store or transmit personal information
-- **CORS Protection**: Server configured for local-only access
-- **Secure Defaults**: Conservative fallbacks when detection fails
+- Edge Preprocessing: All images are cropped and resized to 224x224 locally within the browser's Offscreen Canvas before being sent for analysis.
+- MarkAI operates within a local environment at 127.0.0.1:8000 i.e. never leaving your physical machine, which means no search tracking or data mining.
+- Extension uses an in-memory Map to store detection results for the current session which is cleared with browser restart.
+- Extension defaults to a "Neutral" state to avoid UI breaking, ensuring a stable browsing experience.
 
-## Areas for Improvement
-- Sometimes it can be slow in processing images, especially if there are too many images on the screen or user is scrolling fast.
-- Fine-Tuning of the model to boost accuracy. Right now we are using a pre-trained model.
-- Expanding the extension to work on more sites properly.
+# MARKAI v2.0 Changelogs
+- (Two Layer Approach): We combined ML model logic with Frequency Domain Analysis (FFT). By looking at the frequency spectrum, MarkAI can now flag those AI images that might trick a standard neural network.
+- To ensure almost-instant detection, the extension now crops and resizes images locally using the Chrome Offscreen API before it even hits the server. (Chrome 116+ feature).
+- Strict Mode Revamped: instead of completely eliminating the image+holder, it gets  a subtle white overlay...This is to ensure browsing stability and to eliminated UI breaking.
+- fixed CORS issues by refactoring image fetching; now using Blob-to-Base64 pipeline in the background service workier.
 
-## 📄 License
+## License
 
+<<<<<<< HEAD
 This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+=======
+This project is licensed under the GPL License - see the [LICENSE](LICENSE) file for details.
+>>>>>>> e74ec8c (VERSION 2.0)
 
 ***

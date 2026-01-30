@@ -1,111 +1,116 @@
-import io
-import os
-from typing import List, Dict, Any
-import numpy as np
-import requests
-from PIL import Image
+import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import base64
+import numpy as np
+import cv2
 import onnxruntime as ort
-import uvicorn
-import urllib3
+import os
+from typing import cast, List, Any
 
-# Configuration
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-MODEL_PATH = os.getenv("MODEL_PATH", "models/model.onnx")
-INPUT_SIZE = int(os.getenv("INPUT_SIZE", "224"))
-HOST = os.getenv("HOST", "127.0.0.1")
-PORT = int(os.getenv("PORT", "8000"))
-ALLOW_ORIGINS = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "*").split(",") if o.strip()]
+MODEL_PATH = "models/model.onnx"
+app = FastAPI()
 
-MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-
-# Model loading
-print("Loading ONNX model...")
-try:
-    session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
-    input_name = session.get_inputs()[0].name
-    output_name = session.get_outputs()[0].name
-    print(f"Model loaded successfully. Input: {input_name}, Output: {output_name}")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    raise
-
-# API setup
-app = FastAPI(title="MarkAI API", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOW_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class ClassifyRequest(BaseModel):
-    images: List[str]
+#Model Load
+ort_session = None
+try:
+    if os.path.exists(MODEL_PATH):
+        ort_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+        print(f"-Model loaded-: {MODEL_PATH}")
+    else:
+        print(f"-Warning-: {MODEL_PATH} not found. Running in FFT-only mode.")
+except Exception as e:
+    print(f"-Error loading model-: {e}")
 
-def preprocess_pil(img: Image.Image) -> np.ndarray:
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
-    img = img.resize((INPUT_SIZE, INPUT_SIZE), Image.Resampling.BILINEAR)
-    arr = np.asarray(img, dtype=np.float32) / 255.0
-    arr = (arr - MEAN) / STD
-    chw = np.transpose(arr, (2, 0, 1))
-    return chw
+class ImagePayload(BaseModel):
+    image: str
 
-def softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:
-    e = np.exp(x - np.max(x, axis=axis, keepdims=True))
-    return e / np.sum(e, axis=axis, keepdims=True)
+#FFT Check
+def check_fft_artifacts(img_bgr):
+    try:
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        f = np.fft.fft2(gray)
+        fshift = np.fft.fftshift(f)
+        magnitude = 20 * np.log(np.abs(fshift) + 1e-10)
+        h, w = magnitude.shape
+        cy, cx = h//2, w//2
+        mask_radius = 30
+        y, x = np.ogrid[:h, :w]
+        dist_from_center = np.sqrt((x - cx)**2 + (y - cy)**2)
+        ring_mask = (dist_from_center > mask_radius) & (dist_from_center < (h//2 - 5))
+        high_freq_data = magnitude[ring_mask]
+        if len(high_freq_data) == 0: return 0.5
+        variance = np.var(high_freq_data)
 
-# Endpoints
-@app.post("/classify")
-def classify(req: ClassifyRequest) -> Dict[str, Any]:
-    if not req.images:
-        return {"results": []}
-    final_results: List[Dict | None] = [None] * len(req.images)
-    batch_tensors = []
-    good_idx_map = {}
-    for i, url in enumerate(req.images):
-        try:
-            r = requests.get(url, timeout=8, headers={'User-Agent': 'Mozilla/5.0'}, verify=False)
-            r.raise_for_status()
-            img = Image.open(io.BytesIO(r.content))
-            chw = preprocess_pil(img)
-            good_idx_map[len(batch_tensors)] = i
-            batch_tensors.append(chw)
-        except Exception as e:
-            error_msg = f"Failed to process {url[:100]}: {e}"
-            print(error_msg)
-            final_results[i] = {"url": url, "ok": False, "error": error_msg, "prob_ai": None}
-    if batch_tensors:
-        try:
-            batch = np.stack(batch_tensors, axis=0).astype(np.float32)
-            outputs = session.run([output_name], {input_name: batch})[0]
-            probs = softmax(outputs, axis=1)[:, 1]
-            for batch_idx, prob in enumerate(probs):
-                original_idx = good_idx_map[batch_idx]
-                final_results[original_idx] = {
-                    "url": req.images[original_idx],
-                    "ok": True,
-                    "error": None,
-                    "prob_ai": float(prob)
-                }
-        except Exception as e:
-            error_msg = f"Inference failed: {e}"
-            print(error_msg)
-            for batch_idx in range(len(batch_tensors)):
-                original_idx = good_idx_map[batch_idx]
-                if final_results[original_idx] is None:
-                    final_results[original_idx] = {"url": req.images[original_idx], "ok": False, "error": error_msg, "prob_ai": None}
-    return {"results": final_results}
+        return variance
+    except Exception:
+        return 2000
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+#ML Logic
+def check_onnx_model(img_bgr):
+    if ort_session is None:
+        return 0.0
+    try:
+        img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (224, 224))
+        img = img.astype(np.float32) / 255.0
+        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+        img = (img - mean) / std
+        img = np.transpose(img, (2, 0, 1))
+        img = np.expand_dims(img, axis=0)
 
-# Entrypoint
+        input_name = ort_session.get_inputs()[0].name
+        raw_outputs = ort_session.run(None, {input_name: img})
+        outputs = cast(List[Any], raw_outputs)
+        
+        scores = outputs[0][0]
+        exp_scores = np.exp(scores)
+        probs = exp_scores / np.sum(exp_scores)
+        return float(probs[0])  # AI-generated prob
+    except Exception as e:
+        print(f"ONNX Inference Error: {e}")
+        return 0.5
+
+#Endpoint
+@app.post("/analyze")
+async def analyze(payload: ImagePayload):
+    try:
+        img_data = base64.b64decode(payload.image)
+        nparr = np.frombuffer(img_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return {"is_ai": False, "confidence": 0}
+        fft_variance = check_fft_artifacts(img)
+        fft_suspicion = 0.0
+        if fft_variance < 300:
+            fft_suspicion = 0.4
+        model_prob = check_onnx_model(img)
+        final_score = model_prob
+        
+        if 0.45 < model_prob < 0.55:
+            if fft_variance < 300:
+                final_score += 0.2  # Push towards AI
+            elif fft_variance > 2000:
+                final_score -= 0.1  # Push towards Real
+        is_ai = final_score > 0.55 
+        return {
+            "is_ai": is_ai,
+            "confidence": final_score,
+            "details": {"fft_var": fft_variance}
+        }
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"is_ai": False, "confidence": 0}
+
 if __name__ == "__main__":
-    print("Starting AI Image Flagger Server...")
-    uvicorn.run(app, host=HOST, port=PORT)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

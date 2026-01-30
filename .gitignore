@@ -1,5 +1,6 @@
 /.vscode
 ai-flagger-server/models/
 ai-flagger-server/models/model.onnx
-ai-flagger-server/.venv/
+ai-flagger-server/venv/
 ai-flagger-server/__pycache__/
+ss1.png
