@@ -54,10 +54,6 @@ uvicorn server:app --reload --host 127.0.0.1 --port 8000
 
 ## License
 
-<<<<<<< HEAD
 This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
-=======
-This project is licensed under the GPL License - see the [LICENSE](LICENSE) file for details.
->>>>>>> e74ec8c (VERSION 2.0)
 
 ***
